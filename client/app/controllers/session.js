@@ -3,25 +3,25 @@
 
 	var SessionCtrl = function($scope, $location, Session) {
 		$scope.error = false;
-		$scope.session = new Session();
+		var session = $scope.session = new Session();
 
 		$scope.signin = function() {
-			$scope.session.$save().then(function(data) {
+			session.$save().then(function onSignInDone(data) {
 				$location.path('/');
-			}).catch(function(err) {
+			}).catch(function onSignInFailed(err) {
 				$scope.error = true;
 			});
 		};
 
 		$scope.register = function() {
-			$scope.session.$register().then(function(data) {
+			session.$register().then(function onRegisterDone(data) {
 				$location.path('/');
-			}).catch(function(err) {
+			}).catch(function onRegisterFailed(err) {
 				$scope.error = true;
 			});
 		};
 	};
 
 	SessionCtrl.$inject = ['$scope', '$location', 'Session'];
-	angular.module('EasyChat').controller('SessionCtrl', SessionCtrl);
+	angular.module('EasyChat').controller('controllers.Session', SessionCtrl);
 })();

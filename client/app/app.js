@@ -8,33 +8,44 @@
 
 	app.config(['$routeProvider', function($routeProvider) {
 		$routeProvider.when('/', {
-			controller: 'Home',
+			controller: 'controllers.Home',
 			templateUrl: 'app/views/home.html',
 			resolve: {
-				checkToken: checkToken
+				token: tokenResolver
 			}
 		}).when('/signin', {
-			controller: 'SessionCtrl',
+			controller: 'controllers.Session',
 			templateUrl: 'app/views/signin.html'
-		}).when('/forgotPassword',{
-			controller: 'ForgotPasswordCtrl',
-			templateUrl: 'app/views/forgotPassword.html'
+		}).when('/forgotPassword', {
+			controller: 'controllers.ForgotPassword',
+			templateUrl: 'app/views/forgot-password.html'
 		}).otherwise({
-			redirectTo: '/signin'
+			redirectTo: '/'
 		});
-	}]).run(function() {
-		//Todo: write logic code
-	});
+	}]).run(['$location', '$rootScope', function initilize($location, $rootScope) {
+		$rootScope.$on('$routeChangeError', function handleRouteChangeError(event, next, previous, error) {
+			if (error === 401) {
+				$location.path('/signin');
+				event.preventDefault();
+			} else if (error === 402) {
+				//todo: create page 404
+				$location.path('/404');
+				event.preventDefault();
+			}
+		});
+	}]);
 
-	function checkToken($location, Session) {
-        Session.get().$promise.then(function(data) {
-            if (data.status === 500) {
-                $location.path('/signin');
-            }
-        });
-    };
+	var tokenResolver = function($location, Session) {
+		return Session.get().$promise.then(function getSessionTokenDone(res) {
+			return $location.path('/');
+		}).catch(function handleSessionTokenError(err) {
+			return $location.path('/signin');
+		});
+	};
+
+	tokenResolver.$inject = ['$location', 'Session'];
 
 	angular.element(window).ready(function() {
-		angular.bootstrap(document.body, [ 'EasyChat' ]);
+		angular.bootstrap(document.body, ['EasyChat']);
 	});
 })();

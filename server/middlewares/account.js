@@ -1,123 +1,106 @@
-;(function(){
-	'use strict';
-	
-	var mongoose = require('mongoose');
-	var account = require('../models/account');
-	var Account = mongoose.model('Account');
-	var bird = require('bluebird');
-	var self = module.exports;
+'use strict';
 
-	function findByAccount(account) {
-		var query = Account.findOne({
-			email: account.email,
-			password: account.password
-		});
+require('../models/account');
 
-		var queryexec = bird.promisify(query.exec, query);
-		return queryexec().then(function(account) {
-			return account;
-		});
+var Account = require('mongoose').model('Account');
+var bird = require('bluebird');
+var self = module.exports;
+
+function findByEmail(email) {
+	if (!email) {
+		return;
+	}
+	var query = Account.findOne({
+		email: email
+	});
+
+	var queryexec = bird.promisify(query.exec, query);
+	return queryexec().then(function findByEmailDone(account) {
+		return account;
+	});
+}
+
+function authenticate(account, inputPassword) {
+	if (!account) {
+		return false;
 	}
 
-	function findByEmail(email) {
-		var query = Account.findOne({
-			email: email
-		});
+	return account.authenticate(inputPassword);
+}
 
-		var queryexec = bird.promisify(query.exec, query);
-		return queryexec().then(function(account) {
-			return account;
-		});
+function createAccount(req) {
+	if (!req) {
+		return;
+	}
+	var newAccount = new Account({
+		email: req.body.email,
+		password: req.body.password
+	});
+
+	var queryexec = bird.promisify(newAccount.save, newAccount);
+
+	return queryexec().then(function createAccountDone() {
+		return newAccount;
+	});
+}
+
+function forgotPassword(account) {
+	if (!account) {
+		return;
 	}
 
-	function sendMailer(toEmail) {
+	// todo: generate pwd
+	account.password = 'changed';
 
-	}
+	var queryexec = bird.promisify(account.save, account);
 
-	function createToken(req, res, message) {
-		var token = new Date().getTime();
+	return queryexec().then(function forgotPasswordDone() {
+		return account;
+	});
+}
 
-		if (!req.cookies.token) {
-			res.cookie('token', token, {
-			maxAge: 1e9
-			});
+self.login = function(req, res, next) {
+	return findByEmail(req.body.email).then(function findByEmailDone(account) {
+		if (!account) {
+			return res.status(500).end();
 		}
 
-		return res.json({
-			status: 200,
-			message: message
-			});
+		if (!authenticate(account, req.body.password)) {
+			return res.status(500).end();
 		}
 
-	self.getSession = function(req, res, next) {
-		if (req.cookies.token) {
-			return res.json({
-				status: 200,
-				token: req.cookies.token
-			});
-		} else {
-			return res.json({
-				status: 500
-			});
+		req._user = account;
+		return next();
+	}).catch(function handleError(err) {
+		return res.status(401).json(err);
+	});
+};
+
+self.register = function(req, res, next) {
+	return findByEmail(req.body.email).then(function findByEmailDone(account) {
+		if (account) {
+			return res.status(500).end();
 		}
-	};
 
-	self.login = function(req, res, next) {
-		return findByAccount(req.body).then(function(account) {
-			if (account !== null) {
-				var message = 'login success';
-				return createToken(req, res, message);
-			} else {
-				return res.json({
-					status: 500,
-					error: 'User not found'
-				});
-			}
+		return createAccount(req).then(function createAccountDone(account) {
+			req._user = account;
+			return next();
 		});
-		
-	};
+	}).catch(function handleError(err) {
+		return res.status(500).json(err);
+	});
+};
 
-	self.createSession = function(req, res, next) {
-		return findByEmail(req.body.email).then(function(account) {
-			if (account !== null) {
-				return res.json({
-					status: 500,
-					error: 'Email exist'
-				});
-			}
+self.forgotPassword = function(req, res, next) {
+	return findByEmail(req.body.email).then(function findByEmailDone(account) {
+		if (!account) {
+			return res.status(500).end();
+		}
 
-			var query = Account({
-				email: req.body.email,
-				password: req.body.password,
-				token: ''
-			});
-
-			var queryexec = bird.promisify(query.save, query);
-
-			return queryexec().then(function(account) {
-				var message = 'create user success!';
-				return createToken(req, res, message);
-			});
+		return forgotPassword(account).then(function forgotPasswordDone(account) {
+			return res.end();
 		});
-	};
-
-	self.forgotPassword = function(req, res, next) {
-		return findByEmail(req.body.email).then(function(account) {
-			if (account === null) {
-				return res.json({
-					status: 500,
-					error: 'Email is not exist'
-				});	
-			}
-
-			// set new password for account
-			account.password = 'changed';
-
-			var queryexec = bird.promisify(account.save, account);
-			return queryexec().then(function(account) {
-				var message = 'forgot password success!'
-				return createToken(req, res, message);
-			});
-		});
-	};
-})();
+	}).catch(function handleError(err) {
+		return res.status(500).json(err);
+	});
+};

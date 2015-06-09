@@ -6,5 +6,5 @@
 	};
 
 	Home.$inject = ['$scope'];
-	angular.module('EasyChat').controller('Home', Home);
+	angular.module('EasyChat').controller('controllers.Home', Home);
 })();

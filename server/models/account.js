@@ -1,23 +1,32 @@
-;(function(){
-	'use strict';
-	
-	var mongoose = require('mongoose');
-	var Schema = mongoose.Schema;
+'use strict';
 
-	var AccountSchema = new Schema({
-		email: {
-			type: String,
-			required: true
-		},
-		password: {
-			type: String,
-			required: true
-		},
-		token: {
-			type: String,
-			default: ''
+var mongoose = require('mongoose');
+var passwordHash = require('password-hash');
+var Schema = mongoose.Schema;
+
+var AccountSchema = new Schema({
+	email: {
+		type: String,
+		required: true
+	},
+	hashedPassword: String
+});
+
+AccountSchema.methods = {
+	makeHashedPassword: function(password) {
+		if (!password) {
+			return '';
 		}
-	});	
 
-	mongoose.model('Account', AccountSchema);
-})();
+		return passwordHash.generate(password);
+	},
+	authenticate: function(password) {
+		return passwordHash.verify(password, this.hashedPassword);
+	}
+};
+
+AccountSchema.virtual('password').set(function(password) {
+	this.hashedPassword = this.makeHashedPassword(password);
+});
+
+mongoose.model('Account', AccountSchema);

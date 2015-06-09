@@ -1,20 +1,20 @@
 ;(function() {
 	'use strict';
-	
+
 	var ForgotPasswordCtrl = function($scope, $location, Session) {
 		$scope.error = false;
-		$scope.session = new Session();
+		var session = $scope.session = new Session();
 
 		$scope.forgotPassword = function() {
-			$scope.session.$forgotPassword().then(function(res) {
-				console.log(res);
+			session.$forgotPassword().then(function onForgotPasswordDone(data) {
+				console.log(data);
 				$location.path('/');
-			}).catch(function(err) {
+			}).catch(function onForgotPasswordFailed(err) {
 				$scope.error = true;
 			});
 		};
 	};
 
 	ForgotPasswordCtrl.$inject = ['$scope', '$location', 'Session'];
-	angular.module('EasyChat').controller('ForgotPasswordCtrl', ForgotPasswordCtrl)
+	angular.module('EasyChat').controller('controllers.ForgotPassword', ForgotPasswordCtrl);
 })();

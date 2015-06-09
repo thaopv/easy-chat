@@ -1,4 +1,4 @@
-;(function(){
+;(function() {
 	'use strict';
 
 	var SessionFactory = function($resource) {
@@ -14,7 +14,7 @@
 				url: '/api/session/forgotPassword'
 			}
 		});
-			
+
 		return Session;
 	};
 
